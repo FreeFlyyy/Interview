@@ -376,5 +376,56 @@
 				A证实B的身份，B将生成密钥对将公钥发送给A，而后由B发送到A的操作均是通过私钥加密的，A将使用公钥将解密这个信息，若无法解析则无法证实B的身份，拒绝A的数据。
 				github采用的就是该机制，github是角色A，本地仓库是角色B。github会使用所有的公钥来解析本地仓库发送过去的数据，若均无法解析则拒绝本地仓库的请求。
 十三、NIO
-	NIO主要有哪些类
-	举出一个NIO的使用流程范例
+	1.NIO主要有哪些类
+		1) Buffer
+			Buffer抽象代表了一个有限容量的数据容器，其本质是一个数组。由指针指示了哪里存放数据以及从哪里读取数据。
+			ByteBuffer buffer = new ByteBuffer.allocate(CAPACITY);
+		2) Channel
+			Channel的实例代表了一个与设备的连接，通过channel进输入和输出操作。对于TCP而言有两种：ServerSocketChannel和SocketChannel。
+			channel可以设置为阻塞或者非阻塞：socket.configureBlocking(false);
+			ServerSocketChannel在执行accept()方法时，若有连接请求在等待，则返回SocketChannel实例。
+		3) Selector
+			Selector的实例中可以注册多个Channel的实例，当Channel的实例有事件触发时，将会在Selector中进行记录。channel.register(selector, event);
+			通过selector.select()方法，可以返回已有记录的Channel与其对应的事件。
+			可以注册的事件有:
+				- SelectionKey.OP_ACCEPT
+					这个是ServerSocketChannel的事件。当serverChannel接收到客户端socket的连接请求时，将会触发该事件。
+				- SelectionKey.OP_READ
+					这个是SocketChannel的事件，当socket的读缓冲区中存在数据时，将会触发该事件。
+				- SelectionKey.OP_WRITE
+					这个是SocketChannel的事件按，当socket的写缓冲区没有满时，将会触发改事件。
+			与Selector配合使用的还有SelectionKey类，该类封装了Channel和一个事件。Selector的select()方法将会返回一组SelectiongKey，里面有发生事件的Channel及其事件本身。
+	2.举出一个NIO的使用流程范例
+		nio主要在服务器端使用:
+			private void service() throws Exception{
+				Selector selector = Selector.open();
+				
+				ServerSocketChannel serverChannel = ServerSocketChannel.open();
+				serverChannel.socket().bind(new InetSocketAddress(port));
+				serverChannel.configureBlocking(false);
+				serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+				
+				System.out.println("service start...");
+				while(true){
+					if(selector.select(100) == 0){continue;}		//避免永久阻塞
+
+					Iterator<SelectionKey> keyIter = selector.selectedKeys().iterator();
+					while(keyIter.hasNext()){
+						SelectionKey key = keyIter.next();
+						if(key.isAcceptable()){
+							handleAccept(key);
+						}else if(key.isReadable()){	
+							handleRead(key);
+						}else if(key.isWritable()){
+							handleWrite(key);
+						}
+						keyIter.remove();
+					}
+				}
+			}
+
+			protected void handleAccept(SelectionKey key) throws IOException{
+				SocketChannel clntSocket = ((ServerSocketChannel)key.channel()).accept();
+				clntSocket.configureBlocking(false);
+				clntSocket.register(key.selector(), SelectionKey.OP_READ, new ByteArrayOutputStream());	//注册读客户端socket的事件
+			}

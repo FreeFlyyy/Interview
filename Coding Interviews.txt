@@ -1,0 +1,51 @@
+一 如何介绍项目
+    Situation   : 简短的项目背景，如功能，规模，目标用户。
+    Task        : 完成了项目中哪些部分的开发。
+    Action      : 通过什么技术来进行开发的。
+    Resualt     : 自己的贡献，修改了多少个bug，提高了性能，完成了多少功能。
+    项目中最大的问题，如何解决的。
+    在项目中学到了什么。
+
+二 面试的技术考察
+    1.基础知识
+        主要是编程语言 数据结构 算法。
+    2.高质量代码
+        应该注意边界条件，特殊输入。
+    3.优化能力
+
+三 提问
+    1.薪水工资不问。
+    2.结果不问，否则显得没有自我评估能力，而且一般都是白问。
+    3.问和应聘职务挂钩的事情。
+
+四 基础
+    1.多线程下的单例模式实现
+        1).不能延迟初始化
+            class A{
+                private static A instance = new A();
+                public static A getInstance(){ return instance; }
+            }
+        2).利用同步机制
+            class A{
+                private static A instance;
+                public static A getInstance(){ 
+                    if(instance == null){
+                        synchronized(this){
+                            if(instance == null){
+                                instance = new A();
+                            }
+                        }
+                    }
+                    return instance;
+                }
+            }
+        3).利用嵌套类
+            class A{
+                static public A getInstance(){
+                    return B.unique;
+                }
+                
+                private static class B{
+                    static private final A unique = new A();
+                }
+            }
