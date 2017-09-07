@@ -519,6 +519,8 @@
 		这里的lock主要指ReentrantLock而不是jvm的lock指令。
 		简单来说，ReentrantLock 和 synchronized相比具有相同的并发性和语义，除此外还包含中断锁等候和定时锁等候，即阻塞的线程在指定时间内依然无法获得锁，那么就会自动放弃该锁。
 		更进一步，synchronized是在jvm层面的实现，ReentrantLock是在代码上实现的，因此无法自动释放锁，要显示的使用lock()和unlock()。高并发下，ReentrantLock的性能通常更好。
+		Synchronized阻塞住的线程是按随机方式重新获得锁。
+		Lock分了公平模式和非公平模式，公平模式是按上锁顺序获得锁，非公平模式是大体上也是按上锁顺序获得锁，但是如果在释放锁的时候刚好有个新线程尝试获得锁那么会由该新线程获得锁。Lock默认是非公平模式。
 	2.volatile的作用
 		volatile为了保障与主内存交互的原子性，并且可以取消重排序优化。因此具有可见性。
 		volatile声明的变量操作，都会从主内存中取数据，并将数据同步到主内存。非volatile变量，使用的是线程内存。
