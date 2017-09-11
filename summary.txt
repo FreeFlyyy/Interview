@@ -56,6 +56,13 @@
 		5）PROPAGATION_NOT_SUPPORTED ，这当前级别的特点就是上下文中存在事务，则挂起事务，执行当前逻辑，结束后恢复上下文的事务。
 		6）PROPAGATION_NEVER ，PROPAGATION_NEVER传播级别要求上下文中不能存在事务，一旦有事务，就抛出runtime异常，强制停止执行！
 		7）PROPAGATION_NESTED ，该传播级别特征是，如果上下文中存在事务，则嵌套事务执行，如果不存在事务，则新建事务。
+	7.spring ioc实现原理
+		IoC分了两层实现，现在以两个IoC产品为例：
+			- DefaultListableBeanFactory
+				这个是一个最基本的beanFactory产品，并且也只负责管理bean。若要使用该BeanFactory需要额外使用Resource来定位资源，使用Reader来解析并加载。
+			- FilSystemXmlApplicationContext
+				该产品具备比BeanFactory更高级的功能，集合了资源定位，解析资源，注册BeanDefinition等功能。
+				该类通过继承ResourceLoader来提供资源定位能力，通过具备生成Reader来解析资源，并且在将资源解析为BeanDefinition后将其注册到map中。
 三、oop
 	1.面向对象设计的solid原则
 		1).单一责任原则(Single responsibility)
@@ -150,6 +157,7 @@
 	7.有一个生成0/1的随机数生成器，生成0的概率是p，生成1的概率是1-p，基于此设计一个随机数生成器，使得产生0/1的概率均为1/2
 	8.一个数组中包含了1到1w的不重复数字，找出该数组中不存在的1到1w的两个数字。
 	10.计算字符串表达式的值
+	11.01背包问题
 六、linux
 	1.awk命令
 		awk是一个强大的文本分析工具。awk将文件逐行读取，以空格为默认的分隔符将每行切片，对切开的部分再进行分析处理。
