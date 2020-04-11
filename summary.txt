@@ -191,9 +191,9 @@
 七、计算机网络
 	1.三次握手
 		第一次
-		第一次握手：建立连接时，客户端发送syn包（syn=j）到服务器，并进入SYN_SENT状态，等待服务器确认；SYN：同步序列编号（Synchronize Sequence Numbers）。
+		第一次握手：建立连接时，客户端发送syn包（syn=j）到服务器（包含了自己接受缓存区大小），并进入SYN_SENT状态，等待服务器确认；SYN：同步序列编号（Synchronize Sequence Numbers）。
 		第二次
-		第二次握手：服务器收到syn包，必须确认客户的SYN（ack=j+1），同时自己也发送一个SYN包（syn=k），即SYN+ACK包，此时服务器进入SYN_RECV状态；
+		第二次握手：服务器收到syn包，必须确认客户的SYN（ack=j+1），同时自己也发送一个SYN包（syn=k），即SYN+ACK包（包含了自己接受缓存区大小），此时服务器进入SYN_RECV状态；
 		第三次
 		第三次握手：客户端收到服务器的SYN+ACK包，向服务器发送确认包ACK(ack=k+1），此包发送完毕，客户端和服务器进入ESTABLISHED（TCP连接成功）状态，完成三次握手。
 	2.四次挥手
@@ -306,19 +306,19 @@
 				虽然发送方没有维护rwnd，但是其实他一直都知道rwnd的值。
 				当rwnd为0时，避免发送方无法察觉rwnd不为0的时刻，所以此时会间断发送1字节数据以获取接收方的ack中的rwnd。
 			b).拥塞控制
+				下面讨论的cwnd的单位均为MSS，即 cwnd * MSS 为实际窗口的字节大小。
 				- 慢启动
-					在起初，发送方的cwnd为1，每个MSS接收到ack时会将cwnd+MSS。
-					其实该方法的cwnd的增大速度是比较快的，因为会很快发送cwnd/MSS个包，因此若未拥塞则会接收到cwnd/MSS个ack，也就是会让cwnd指数增长。
-					当包超时意味着发生了拥塞，此时将ssthresh=cwnd/2; cwnd=1，此时进入拥塞避免模式;
+					初始时，发送方cwnd为1；每收到1个ACK，cwnd++；每过一个RTT时间，cwnd*=2；
+					当包超时意味着发生了拥塞，此时将ssthresh=cwnd/2; cwnd=1，在cwnd<ssthresh时，会继续使用慢启动方式;
+					cwnd的增长方式表现为指数增长，其实增长很快。
 					当接收到3个冗余ACK意味拥塞，此时进入快速恢复模式。
 				- 拥塞避免
-					接收到一个MSS的ACK时会将cwnd增加MSS/cwnd。当cwnd增加到ssthresh时，重新进入慢启动模式。
-					当包超时意味着发生了拥塞，此时将ssthresh=cwnd/2; cwnd=1，此时进入拥塞避免模式;
-					当接收到3个冗余ACK意味拥塞，此时进入快速恢复模式。
+					当cwnd增加到ssthresh时，进入了拥塞避免模式，主要表现在降低cwnd增长速度上。
+					此时，接收到一个ACL时，cwnd = cwnd + 1/cwnd，每当过一个RTT，cwnd+=1；表现为线性增长。
 				- 快速恢复
-					接收到冗余ACK，将cwnd=cwnd+MSS。
-					当接收到行的ACK，意味着非阻塞，此时转换到拥塞避免模式。
-					当包超时意味着发生了拥塞，此时将ssthresh=cwnd/2; cwnd=1，此时进入拥塞避免模式;
+					接收到冗余ACK，将ssthresh=cwnd/2，cwnd=cwnd/2。
+					可见cwnd和ssthresh是相等的，意味着直接进入拥塞避免。
+					这种方案主要是省略慢启动步骤。
 	11.超时重传：
 		基本原理：在发送一个数据之后，就开启一个定时器，若是在这个时间内没有收到发送数据的ACK确认报文，则对该报文进行重传，在达到一定次数还没有成功时放弃并发送一个复位信号。 
 	12.快速重传：	
