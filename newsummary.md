@@ -7,6 +7,7 @@
     - [安全](#安全)
     - [http](#http)
     - [Linux-CPU](#linux-cpu)
+    - [Linux-IO](#linux-io)
     - [Linux-Memory](#linux-memory)
     - [Linux-Network](#linux-network)
     - [Redis](#redis)
@@ -33,7 +34,7 @@
     * no-cache, 强制要求把数据标识发给服务器进行校验，如果没有变化响应304。
     * private/public，主要是告诉代理服务器或者cdn的，private由用户缓存，public随意缓存。
     * max-age，缓存的最大时间。
-    * Pragma: no-cache。其他用户http1.1，这个用于http1.0
+    * Pragma: no-cache。其他用于http1.1，这个用于http1.0
 * 安全方面考量：
     * X-Content-Type-Options，要求浏览器强制信任响应头中的Content-Type，不能自行猜测和解析内容
     * Strict-Transport-Security，表示只能用https访问资源
@@ -41,9 +42,25 @@
     * Content-Security-Policy，CSP，具体描述资源能否被http/https访问，eval是否能执行，等等一系列的内容安全策略。
     * X-Frame-Options 标识资源不能被iframe内嵌。
 * SSL原理
+    * 通过 SSL 证书来暴露自己的信息，服务器和客户端都可以有自己的证书。
+        * SSL 证书信息包括 Subject、Issure、非对称加密公钥、Issure给证书的签名。
+        * 证书签名可以用来保证证书的数据没有被篡改过，采用的校验共钥是 Issure 颁布的公钥。
+        * Issure 的有效性通过相同的方式校验 Issure 的证书，直到某一个 Issure 是浏览器的受信证书。
+    * 通过非对称加密实现加密密钥的交换。
+        * 请求发起方使用对方证书暴露出的公钥，对加密密钥进行加密，然后请求接收方用证书私钥对其解密。
+    * 通过对称加密对通信数据进行加密
+        * 加密密钥由非对称加密进行确认。
 * DNS原理
+    * 本地hosts文件
+    * 到本地记录的dns服务器进行请求
+    * dns服务器有缓存就直接返回
+    * dns服务器根服务器请求对应的域名解析服务器
+    * 域名解析服务器返回对应的ip
 * CDN原理
+    * 本质上就是域名解析服务器根据请求者ip的地区返回不同的边缘节点ip。
 * 跨域问题
+    * jsonp
+    * 跨域头
 
 ## Linux-CPU
 * 进程的状态
@@ -65,6 +82,27 @@
     * 共享内存
     * socket
 * 系统负载
+    * 即 R 状态和 D 状态的进程数量
+    * 每隔一段时间就进行一次统计
+    * 进行1分钟平均、5分钟平、15分钟平均
+
+## Linux-IO
+* inode
+    * 每个文件都有对应的一个inode，一个indoe中记录了很多元信息，包括：
+        * 文件的字节数
+        * 文件的读写权限
+        * 文件的userid和groupid
+        * 文件的时间戳：ctime, atime, mtime
+        * inode的链接数
+        * 文件内容对应的区块位置
+    * 每个文件都有一个inode编号，指向对应的inode，inode编号记录在目录中。`ls -i ${filename}` 可以看对应文件的indoe编号。
+    * 目录是一种特殊的文件，目录中的文件内容即：文件名以及对应的inode编号。所以目录也有对应的inode。
+    * 硬连接：
+        * inode中的链接数即硬连接。
+        * inode的链接数为0时，才会清理磁盘。
+        * 一个目录下的`.`和`..`分别是当前目录的硬连接，和上一级目录的硬连接。
+    * 软链接，本质上是一个新的文件，会占用一个新的inode。文件内容是源文件的路径。
+    * inode数据也会占用磁盘，被系统分配在一个特殊的盘上。如果磁盘未满，但是inode盘满了，是无法创建新文件的。
 
 ## Linux-Memory
 * 进程映射
@@ -86,12 +124,17 @@
     * `void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);`
 * brk
     brk是一种直接在heap上分配空间的技术，最简单的方式是brk的指针直接向上增长。老版本的方式会导致内存泄漏。
-* 如何关闭swap
-* 如何关闭oom
 * 内存不足时linux的动作
     * swap
     * 释放`buffer/cache`
     * OOM
+    * swap 和 buff/cache 是较为安全的回收机制，操作系统需要判断当前内存不足时采用哪种。
+        * `/proc/sys/vm/swappiness` 文件描述了内存不足时使用swap的优先级
+        * swappiness 值越大，就越倾向于用 swap，否则倾向于用 buff/cache
+        * swapiness 的值范围是 `0 - 200` ，即便为0并不是表示不会再swapiness，而是buff/cache清理也不够的情况下，还是会用swap的。
+* 如何判断进程切换和中断带来的压力：
+    * vmstat中的cs，表示上下文切换的次数
+    * vmstat中的in，表示系统中断的次数
 * `buffer/cache`
     * Linux内核2.6前:
         * buff, 文件写缓存, 主要是为了提升IO密集时的性能，内核先将数据写到缓冲，再同步到慢速设备磁盘上，进行削峰填谷。
@@ -197,8 +240,17 @@
 * 事务的四大特性
 * 隔离级别
 * 索引类型
+    * 主键索引
+    * 普通索引
+    * 唯一索引（也可以加快搜索速度的）
+    * 全文索引
 * 会导致索引失效的情况
+    * where 用 or
+    * where 用null
+    * where 中字段用了计算
+    * where 中用in
 * explain mysql 性能查询
+* 字符集问题
 
 ## Nginx & Openresty
 * 什么是惊群，以及如何解决
@@ -207,6 +259,20 @@
     * 即便是老版本，惊群影响也不大，因为worker进程本身就很少，而且通常都是建立长链接。在并发量很大的时候，应该忽略惊群问题。
 * Nginx的各个阶段
 * openresty的各个阶段
+    * Init:
+        * init_by_lua
+        * init_worker_by_lua
+    * Rewrite/Access
+        * ssl_certificate_by_lua (if https)
+        * set_by_lua
+        * rewrite_by_lua: 转发、重定向、缓存等功能
+        * access_by_lua IP: 准入、接口权限等情况集中处理
+    * Content
+        * content_by_lua: 内容生成
+        * header_filter_by_lua: 响应头部过滤处理(例如添加头部信息)
+        * content_filter_by_lua: 响应体过滤处理(例如转换响应内容)
+    * Log
+        * log_by_lua
 * Nginx限流
     * 采用漏桶算法
     * `limit_req_zone key zone=name:size rate=rate [sync]`，key是指的对这个变量的出现速率进行限制；zone标识存储区域以及存储区域大小（其实就是漏桶的大小），超出漏洞的部分将会被拒绝；rate指的是具体速率。
@@ -228,6 +294,10 @@
 * state的作用
     * 防csrf攻击
 * PKCE的原理和作用
+    * 发送授权请求的时候传code_challenge（由code_verifier生成）
+    * 发送token请求的时候，把code_verifier传给服务器，服务器把code_verifier和之前发送的code_challenge进行匹配。
+    * pkce主要是用于native app，这时候的client_id/client_secret是容易被黑客拿到的，如果黑客拦截了code，就容易被黑客用来拿到token。
+    * 用了pkce，黑客就算拿到了code和client_secret也没用，因为不知道code_verifier。
 * 认证和授权的关系
 
 ## OIDC
@@ -252,6 +322,7 @@
     * 所有的C++对象都有一个隐藏对象，这个对象叫做vtbl，是一个数组，记录了所有的类中虚函数的地址。
     * 父类和子类中记录的vtbl是不同的，子类的vtbl记录的是自己重写后的虚函数地址。
     * 在进行调用的时候，是在vtbl中查该使用哪个函数地址。
+    * vtbl在编译时确定，属于类成员变量。
 * 什么是动态联编和静态联编
 * 为什么动态联编不设置为默认的
     * 主要是效率问题，使用虚函数会带来额外的存储开销和调用开销。
@@ -269,11 +340,27 @@
     ```
 * C++ 的成员变量初始化顺序
     * 和初始化列表的顺序无关，只和声明的顺序有关。
+* delete 和 delete[] 的区别
+    * `delete/delete[]` 都可以把 `new/new[]` 申请的内存区域全部释放掉
+    * 如果是`new[]`申请的，delete只会调用首个元素的析构，`delete[]`会调用每个元素的析构。
+    * 对于普通数据类型，调用`delete/delete[]`都ok，因为普通数据类型没有析构。
+* 如果a是一个指针变量，a++意味这什么。
+    * 如果 a 指向的数据类型是 type, 且一个type的数据类型有N字节，那么a++意味这指针向后移动N字节。
 
 ## 容器化技术
-* 隔离技术
-* 资源限制技术
+* 隔离技术， namespace，可以查到容器对哪些资源进行了隔离（即使用了namespace）`/proc/${container-pid}/ns`。
+* 资源限制技术，cgroup
+    * 当前系统
+        * `/sys/fs/cgroup` 中描述了当前系统的资源限制情况，以及哪些资源可以做限制。
+    * 子系统
+        * 子系统其实就是在`/sys/fs/cgroup/${resource}`下的一个目录
+        * 目录`/sys/fs/cgroup/${resource}/${sub-system}`创建的时候，会在其中自动生成资源限制文件，只需要改变其中的文件，就能对子系统做限制。
+        * `/sys/fs/cgroup/${resource}/${sub-system}/tasks` 记录了一批 pid，描述了哪些进程受该子系统资源限制。
+        * 对于docker而言，docker中的每个容器都受docker子系统的限制，容器中的每个进程又受容器子系统限制：
+            * docker子系统: `/sys/fs/cgroup/${resource}/docker`，对所有的容器都进行限制。
+            * 容器子系统: `/sys/fs/cgroup/${resource}/docker/${container_id}`，对容器中的所有进程都进行限制。
 * 文件系统
+    * 镜像分层
 
 ## 分布式相关
 * 一致性hash的目的：
