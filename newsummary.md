@@ -249,7 +249,9 @@
     * where 用null
     * where 中字段用了计算
     * where 中用in
-* explain mysql 性能查询
+* explain mysql sql查询时候采用的索引等情况。具体的耗时情况还是需要用profile机制。
+* show profiles，在profile功能打开时(set profiling=1;)，可以观察每个查询的耗时。（只能查查询语句）
+* show profile for query ${queryid} 可以查看每个查询在每个环境的具体耗时情况。（只能查查询语句）
 * show full processlist 可以观察每个连接的执行情况。
     * id，线程id。如果阻塞很长时间应该杀掉。
     * state，非常重要，是连接的状态。正常情况下应该多是sleep。
