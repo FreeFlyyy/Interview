@@ -136,9 +136,9 @@
 	4.最长公共子序列
 		最大公共子序列有这么一个特点：两串的结尾符号相同时，那么该符号必定是最大公共子序列的结尾符号。
 		设c[i, j]为x1...xi和y1...yj的最大公共子序列的长度，那么：有
-		c[i, j] = 0								, if i=0 or j=0
-		        = c[i-1, j-1] + 1				, if xi==xj
-				= max( c[i-1, j], c[j, i-1] )	, if i,j>0 and xi!=xj
+		c[i, j] = 0                                             , if i=0 or j=0
+		        = c[i-1, j-1] + 1                               , if xi==xj
+			= max( c[i-1, j], c[j-1, i] )                   , if i,j>0 and xi!=xj
 	5.反向链表
 		1).递归方案
 			Node process(Node parent){
