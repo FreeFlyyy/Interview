@@ -250,6 +250,11 @@
     * where 中字段用了计算
     * where 中用in
 * explain mysql 性能查询
+* show full processlist 可以观察每个连接的执行情况。
+    * id，线程id。如果阻塞很长时间应该杀掉。
+    * state，非常重要，是连接的状态。正常情况下应该多是sleep。
+    * time，非常重要，是连接在state持续的时间。
+    * info，非常重要，执行的sql语句。
 * 字符集问题
 
 ## Nginx & Openresty
